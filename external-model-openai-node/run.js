@@ -6,6 +6,7 @@ import chalk from "chalk"; // Package for colored terminal output
 const ERROR = chalk.red;
 const SECTION = chalk.cyan;
 const ITEM = chalk.yellow;
+const WARN = chalk.magenta;
 const NORMAL = chalk.white; // Or just use console.log without chalk for default color
 
 // Check if the API key is set
@@ -19,12 +20,24 @@ if (!process.env.OPENAI_API_KEY) {
 
 const openai = new OpenAI();
 
+function getAssistantText(message) {
+  if (typeof message.content === "string" && message.content.length > 0) {
+    return message.content.trim();
+  }
+  return "";
+}
+
 async function run() {
-  // const model = "gpt-3.5-turbo-0125";
-  // const model = "gpt-4"
-  // const model = "gpt-o4"
-  // const model = "gpt-4o"
-  const model = "gpt-4-turbo"
+  // const model = "gpt-6-astra"
+  // const model = "gpt-6.1-sol"
+  // const model = "gpt-6.1-terra"
+  // const model = "gpt-6-sol"
+  // const model = "gpt-6-luna"
+  // const model = "gpt-5.6-sol"
+  // const model = "gpt-5.6-terra"
+  // const model = "gpt-5.6-luna"
+  // const model = "chat-latest"
+  const model = "gpt-6-luna"
   const promptContent = "Jakie jest najszybsze zwierzę na Ziemi?"; // Prompt content
 
   console.log(`${ITEM("model")}: ${model}`);
@@ -39,11 +52,16 @@ async function run() {
           content: promptContent,
         },
       ],
-      max_completion_tokens: 128,
+      max_completion_tokens: 512,
+      // reasoning_effort: none, minimal, low, medium, high, xhigh, max
+      reasoning_effort: "none",
     });
 
-    const responseText = completion.choices[0].message.content.trim();
+    const choice = completion.choices[0];
+    const message = choice.message;
+    const responseText = getAssistantText(message);
     const usage = completion.usage;
+    const reasoningTokens = usage?.completion_tokens_details?.reasoning_tokens ?? 0;
 
     console.log(SECTION("--- Conversation ---"));
     console.log(`${ITEM(`User`)}: "${promptContent}"`);
@@ -51,6 +69,9 @@ async function run() {
     console.log(SECTION("--- Usage Statistics ---"));
     console.log(NORMAL(`Prompt tokens (input): ${usage.prompt_tokens}`));
     console.log(NORMAL(`Completion tokens (output): ${usage.completion_tokens}`));
+    if (reasoningTokens > 0) {
+      console.log(NORMAL(`Reasoning tokens (hidden): ${reasoningTokens}`));
+    }
     console.log(NORMAL(`Total tokens: ${usage.total_tokens}`));
     console.log(NORMAL(`Success: Connection and API call are working correctly! 🎉`));
 

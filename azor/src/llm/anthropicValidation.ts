@@ -21,7 +21,7 @@ export type AnthropicConfig = z.infer<typeof AnthropicConfigSchema>;
 export function validateAnthropicConfig(): AnthropicConfig {
   const config = {
     engine: 'ANTHROPIC' as const,
-    modelName: process.env.ANTHROPIC_MODEL_NAME || process.env.MODEL_NAME || 'claude-3-5-haiku-latest',
+    modelName: process.env.ANTHROPIC_MODEL_NAME || process.env.MODEL_NAME || 'claude-haiku-5-5',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   };
 

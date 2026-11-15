@@ -21,7 +21,7 @@ export type GeminiConfig = z.infer<typeof GeminiConfigSchema>;
 export function validateGeminiConfig(): GeminiConfig {
   const config = {
     engine: 'GEMINI' as const,
-    modelName: process.env.GEMINI_MODEL_NAME || process.env.MODEL_NAME || 'gemini-2.5-flash',
+    modelName: process.env.GEMINI_MODEL_NAME || process.env.MODEL_NAME || 'gemini-3.5-flash-lite',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
   };
 

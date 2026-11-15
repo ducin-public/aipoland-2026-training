@@ -1,16 +1,39 @@
 # AI Poland 2026 Workshop
 
-# wms-frontend
+## getting started
+
+You need access to an AI model via API keys. If you don't have one yet, I recommend OpenRouter prepaid (you can choose from _hundreds_ of models, conveniently). Alternatively, **Google Gemini offers a free **quota (you have to register/configure an API key anyway).
+
+## model access/subscriptions
+
+- OpenAI: [API keys](https://platform.openai.com/settings/organization/api-keys), [billing](https://platform.openai.com/settings/organization/billing/overview)
+- Anthropic: [API keys](https://platform.claude.com/settings/keys), [billing](https://platform.claude.com/settings/billing)
+- Gemini: [API keys](https://aistudio.google.com/api-keys), [billing](https://aistudio.google.com/billing)
+- OpenRouter: [API keys](https://openrouter.ai/workspaces/default/keys), [billing](https://openrouter.ai/settings/credits)
+
+## setup
+
+### `external-model-*`
+
+These directories include a minimal setup to connect with a model via key. You need to configure `.env` file which includes your API key. Useful to setup/troubleshoot connection itself.
+
+### `azor`
+
+This is the main exercise-codebase. Here you also need to configure `.env`(external vendors _or__ local LLAMA.cpp if you have it). **Main work will be done here**.
+
+### wms-frontend (additional frontend app)
 
 - auth: manager/password, coordinator/password, worker/password
 - `npm i`, `npm start`
 - angular
 
-# tms-frontend
+### tms-frontend (additional frontend app)
 
 - auth: proper email / any password
 - `npm i`, `npm run dev`
 - react
+
+----
 
 ## Question
 

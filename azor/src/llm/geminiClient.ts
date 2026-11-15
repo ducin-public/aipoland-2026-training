@@ -2,7 +2,7 @@
  * Google Gemini API LLM Client
  */
 
-import { GoogleGenerativeAI, Content } from '@google/generative-ai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import type {
   ILLMClient,
   ILLMChatSession,
@@ -11,28 +11,89 @@ import type {
 } from '../types/index.js';
 import { validateGeminiConfig } from './geminiValidation.js';
 
+function messagesToGeminiContents(history: Message[]) {
+  return history.map((msg) => ({
+    role: msg.role === 'model' ? ('model' as const) : ('user' as const),
+    parts: msg.parts.map((part) => ({ text: part.text })),
+  }));
+}
+
+function isLegacyGeminiModel(modelName: string): boolean {
+  return modelName.startsWith('gemini-2.5') || modelName.startsWith('gemini-1.5');
+}
+
+function isFlashLiteModel(modelName: string): boolean {
+  return modelName.includes('flash-lite');
+}
+
 /**
  * Wrapper for Gemini chat session to provide universal interface
  */
 class GeminiChatSessionWrapper implements ILLMChatSession {
-  private geminiSession: any;
+  private ai: GoogleGenAI;
+  private modelName: string;
+  private systemInstruction: string;
   private history: Message[] = [];
+  private thinkingBudget?: number;
 
-  constructor(geminiSession: any, initialHistory?: Message[]) {
-    this.geminiSession = geminiSession;
+  constructor(
+    ai: GoogleGenAI,
+    modelName: string,
+    systemInstruction: string,
+    initialHistory?: Message[],
+    thinkingBudget?: number
+  ) {
+    this.ai = ai;
+    this.modelName = modelName;
+    this.systemInstruction = systemInstruction;
     this.history = initialHistory || [];
+    this.thinkingBudget = thinkingBudget;
   }
 
   async sendMessage(text: string): Promise<LLMResponse> {
-    const result = await this.geminiSession.sendMessage(text);
-    const response = result.response;
-    const responseText = response.text();
-
-    // Add to history
     this.history.push({
       role: 'user',
       parts: [{ text }],
     });
+
+    const contents = messagesToGeminiContents(this.history);
+    let result;
+
+    if (isLegacyGeminiModel(this.modelName)) {
+      const budget = this.thinkingBudget ?? 0;
+      result = await this.ai.models.generateContent({
+        model: this.modelName,
+        contents,
+        config: {
+          systemInstruction: this.systemInstruction,
+          thinkingConfig: {
+            thinkingBudget: budget,
+          },
+        },
+      });
+    } else if (isFlashLiteModel(this.modelName)) {
+      result = await this.ai.models.generateContent({
+        model: this.modelName,
+        contents,
+        config: {
+          systemInstruction: this.systemInstruction,
+        },
+      });
+    } else {
+      result = await this.ai.models.generateContent({
+        model: this.modelName,
+        contents,
+        config: {
+          systemInstruction: this.systemInstruction,
+          thinkingConfig: {
+            thinkingLevel: ThinkingLevel.MINIMAL,
+          },
+        },
+      });
+    }
+
+    const responseText = result.text?.trim() ?? '';
+
     this.history.push({
       role: 'model',
       parts: [{ text: responseText }],
@@ -50,14 +111,14 @@ class GeminiChatSessionWrapper implements ILLMChatSession {
  * Gemini LLM Client implementation
  */
 export class GeminiLLMClient implements ILLMClient {
-  private genAI: GoogleGenerativeAI;
+  private ai: GoogleGenAI;
   private modelName: string;
   private apiKey: string;
 
   constructor(modelName: string, apiKey: string) {
     this.modelName = modelName;
     this.apiKey = apiKey;
-    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.ai = new GoogleGenAI({ apiKey });
   }
 
   /**
@@ -76,47 +137,22 @@ export class GeminiLLMClient implements ILLMClient {
     history?: Message[],
     thinkingBudget?: number
   ): ILLMChatSession {
-    // Convert universal Message format to Gemini Content format
-    const geminiHistory: Content[] = (history || []).map((msg) => ({
-      role: msg.role === 'model' ? 'model' : 'user',
-      parts: msg.parts.map((part) => ({ text: part.text })),
-    }));
-
-    // Create model configuration
-    const modelConfig: any = {
-      model: this.modelName,
-      systemInstruction: {
-        role: 'system',
-        parts: [{ text: systemInstruction }],
-      },
-    };
-
-    // Add thinking budget if specified
-    if (thinkingBudget !== undefined) {
-      modelConfig.generationConfig = {
-        thinkingBudget: thinkingBudget,
-      };
-    }
-
-    const model = this.genAI.getGenerativeModel(modelConfig);
-
-    const geminiSession = model.startChat({
-      history: geminiHistory,
-    });
-
-    return new GeminiChatSessionWrapper(geminiSession, history);
+    return new GeminiChatSessionWrapper(
+      this.ai,
+      this.modelName,
+      systemInstruction,
+      history,
+      thinkingBudget
+    );
   }
 
   /**
    * Count tokens in history
    */
   countHistoryTokens(history: Message[]): number {
-    // Convert to Gemini format and count
-    // For now, use rough estimation (will implement actual token counting)
     let totalTokens = 0;
     for (const msg of history) {
       for (const part of msg.parts) {
-        // Rough estimation: 1 token ≈ 4 characters
         totalTokens += Math.ceil(part.text.length / 4);
       }
     }

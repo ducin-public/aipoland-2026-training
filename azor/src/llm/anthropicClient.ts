@@ -56,12 +56,13 @@ class AnthropicChatSessionWrapper implements ILLMChatSession {
       messages: anthropicMessages,
     };
 
-    // Add thinking configuration if budget is specified
     if (this.thinkingBudget !== undefined) {
       messageParams.thinking = {
         type: 'enabled',
         budget_tokens: this.thinkingBudget,
       };
+    } else {
+      messageParams.thinking = { type: 'disabled' };
     }
 
     // Send message to Anthropic API

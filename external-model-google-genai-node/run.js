@@ -16,8 +16,15 @@ if (!API_KEY) {
 
 const ai = new GoogleGenAI({});
 
-const model = "gemini-2.5-flash";
-// const model = "gemini-1.5-pro";
+const model = "gemini-3.5-flash-lite";
+// const model = "gemini-3.8-flash"
+// const model = "gemini-flash-lite-latest" // alias
+// const model = "gemini-flash-latest" // alias
+// const model = "gemini-3.1-flash-lite"
+// const model = "gemini-2.5-flash"
+// const model = "gemini-2.5-flash-lite"
+// const model = "gemini-2.5-pro"
+// const model = "gemini-1.5-pro"
 
 const systemRole = "you were Gandalf the Grey in the Lord of the Rings. You answer in max 15 words. Your answers are mysterious and magical.";
 
@@ -38,18 +45,33 @@ const conversationHistory = [
 
 async function run() {
     try {
-        console.log("\nSending query to Gemini...");
+        console.log(`\nSending query to Gemini (model: ${model})...`);
 
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: conversationHistory,
-            config: {
-                systemInstruction: systemRole,
-                thinkingConfig: {
-                    thinkingBudget: 0
-                }
-            },
-        });
+        let response;
+
+        if (model.startsWith("gemini-2.5") || model.startsWith("gemini-1.5")) {
+            response = await ai.models.generateContent({
+                model: model,
+                contents: conversationHistory,
+                config: {
+                    systemInstruction: systemRole,
+                    // thinkingBudget: 0 (off), -1 (dynamic), or number of tokens
+                    thinkingConfig: {
+                        thinkingBudget: 0,
+                    },
+                },
+            });
+        } else {
+            response = await ai.models.generateContent({
+                model: model,
+                contents: conversationHistory,
+                config: {
+                    systemInstruction: systemRole,
+                    // Flash-Lite: without thinkingConfig (default). Flash 3.x: uncomment below.
+                    thinkingConfig: { thinkingLevel: "minimal" }, // minimal, low, medium, high
+                },
+            });
+        }
 
         console.log("Gandalf's answer:");
         console.log(response.text);

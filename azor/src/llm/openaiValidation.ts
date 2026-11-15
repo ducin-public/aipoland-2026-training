@@ -21,7 +21,7 @@ export type OpenAIConfig = z.infer<typeof OpenAIConfigSchema>;
 export function validateOpenAIConfig(): OpenAIConfig {
   const config = {
     engine: 'OPENAI' as const,
-    modelName: process.env.OPENAI_MODEL_NAME || process.env.MODEL_NAME || 'gpt-4-turbo',
+    modelName: process.env.OPENAI_MODEL_NAME || process.env.MODEL_NAME || 'gpt-6-luna',
     openaiApiKey: process.env.OPENAI_API_KEY || '',
   };
 

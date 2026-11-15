@@ -1,5 +1,5 @@
 {
-  "name": "external-model-anthropic",
+  "name": "external-model-google-genai",
   "author": "Developer Jutra",
   "private": true,
   "type": "module",

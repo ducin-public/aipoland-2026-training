@@ -11,6 +11,24 @@ import type {
 } from '../types/index.js';
 import { validateOpenAIConfig } from './openaiValidation.js';
 
+function getAssistantText(
+  message: OpenAI.Chat.Completions.ChatCompletionMessage
+): string {
+  if (typeof message.content === 'string' && message.content.length > 0) {
+    return message.content.trim();
+  }
+  return '';
+}
+
+function isReasoningModel(modelName: string): boolean {
+  return (
+    modelName.startsWith('gpt-5') ||
+    modelName.startsWith('gpt-6') ||
+    modelName.startsWith('o3') ||
+    modelName.startsWith('o4')
+  );
+}
+
 /**
  * Wrapper for OpenAI chat session to provide universal interface
  */
@@ -19,17 +37,20 @@ class OpenAIChatSessionWrapper implements ILLMChatSession {
   private modelName: string;
   private systemInstruction: string;
   private history: Message[] = [];
+  private thinkingBudget?: number;
 
   constructor(
     client: OpenAI,
     modelName: string,
     systemInstruction: string,
-    initialHistory?: Message[]
+    initialHistory?: Message[],
+    thinkingBudget?: number
   ) {
     this.client = client;
     this.modelName = modelName;
     this.systemInstruction = systemInstruction;
     this.history = initialHistory || [];
+    this.thinkingBudget = thinkingBudget;
   }
 
   async sendMessage(text: string): Promise<LLMResponse> {
@@ -51,14 +72,19 @@ class OpenAIChatSessionWrapper implements ILLMChatSession {
       })),
     ];
 
-    // Send message to OpenAI API
-    const completion = await this.client.chat.completions.create({
+    const completionParams: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming = {
       model: this.modelName,
       messages: openaiMessages,
       max_completion_tokens: 4096,
-    });
+    };
 
-    const responseText = completion.choices[0].message.content?.trim() || '';
+    if (isReasoningModel(this.modelName) && this.thinkingBudget === undefined) {
+      completionParams.reasoning_effort = 'none';
+    }
+
+    const completion = await this.client.chat.completions.create(completionParams);
+
+    const responseText = getAssistantText(completion.choices[0].message);
 
     // Add assistant response to history
     this.history.push({
@@ -104,13 +130,13 @@ export class OpenAILLMClient implements ILLMClient {
     history?: Message[],
     thinkingBudget?: number
   ): ILLMChatSession {
-    // Note: OpenAI doesn't support thinking budget like some other models
-    // The parameter is ignored for compatibility with the interface
+    // OpenAI reasoning models use reasoning_effort, not thinkingBudget (Gemini-style).
     return new OpenAIChatSessionWrapper(
       this.client,
       this.modelName,
       systemInstruction,
-      history
+      history,
+      thinkingBudget
     );
   }
 

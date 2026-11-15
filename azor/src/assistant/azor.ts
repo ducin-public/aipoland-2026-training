@@ -27,3 +27,5 @@ export function createAzorAssistant(): Assistant {
   const assistantName = 'AZOR';
   return new Assistant(AZOR_SYSTEM_PROMPT_PL, assistantName);
 }
+
+export { PADDINGTON_SYSTEM_PROMPT_EN, PADDINGTON_SYSTEM_PROMPT_PL };
